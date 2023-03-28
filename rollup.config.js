@@ -30,6 +30,6 @@ module.exports = [
     external: id => {
       // 排除 node_modules 下的依赖
       return /^[\w-]+$/.test(id)
-    }
+    },
   }
 ]
