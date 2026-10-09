@@ -80,8 +80,11 @@ npm version patch       # 修订号：2.0.0 -> 2.0.1
 npm version minor       # 次版本：2.0.0 -> 2.1.0
 npm version major       # 主版本：2.0.0 -> 3.0.0
 
-# 4. 发布
+# 4. 发布（已启用 2FA 时会提示输入一次性验证码）
 npm publish
+
+# 也可以在命令行直接带上验证码，适合非交互场景
+npm publish --otp=123456
 
 # 5. 推送提交和 tag 到远端
 git push --follow-tags
@@ -90,6 +93,37 @@ git push --follow-tags
 发布前会自动执行 `npm test`（`prepublishOnly` 钩子），测试不通过则中止发布。
 
 实际发布的文件由 `package.json` 的 `files` 字段控制，仅包含 `bin`、`src`、`README.md`。
+
+### 发布报 403：要求 Two-factor authentication
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/sure-cli - Two-factor authentication or
+granular access token with bypass 2fa enabled is required to publish packages.
+```
+
+npm 现在要求发布必须满足二选一：账号启用 2FA 后交互式输入验证码，或使用勾选了 Bypass 2FA 的 granular access token。仅 `npm login` 登录、账号未开启 2FA 时，发布会被拒绝。
+
+**解决：先给账号启用 2FA**
+
+1. 打开 Profile 设置页，找到 Two-Factor Authentication
+2. 选择 **Authorization and writes**（发布是写操作，只选 Authorization 仍会失败）
+3. 用验证器 App（1Password / Google Authenticator 等）扫码，并保存恢复码
+
+启用后重新执行 `npm publish`，会提示输入 6 位验证码。若仍然 403，执行一次 `npm login` 刷新会话再试。
+
+**不想每次输验证码，或需要在 CI 中发布**：创建带 Bypass 2FA 的 granular token
+
+1. Tokens 页面 → Generate New Token → Granular Access Token
+2. 权限选 Read and write，勾选 **Bypass 2FA**（创建时需要在页面上通过一次 2FA 验证）
+3. 把生成的 token 写入 `~/.npmrc`：
+
+```
+//registry.npmjs.org/:_authToken=npm_xxxxxxxx
+```
+
+token 等同于密码，不要提交到 git。
+
+> ⚠️ npm 已宣布自 2027 年 1 月起移除 bypass token 的直接发布能力，届时自动化发布需要迁移到 trusted publishing（OIDC）或 staged publishing。
 
 ### 其他常用命令
 
