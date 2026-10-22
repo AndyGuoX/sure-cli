@@ -1,6 +1,6 @@
 # SURE-CLI
 
-一个简单的前端工程脚手架，从 [sure-cli-template](https://github.com/orgs/sure-cli-template/repositories) 拉取模板快速初始化项目。
+一个简单的工程脚手架，从 [AndyGuoX/sure-cli-templates](https://github.com/AndyGuoX/sure-cli-templates) 的模板目录快速初始化项目。
 
 ## 环境要求
 
@@ -23,7 +23,7 @@ sure-cli create my-app
 sure-cli list
 
 # 直接指定模板，跳过交互（适合 CI）
-sure-cli create my-app -t template-react-hook
+sure-cli create my-app -t template-nest-react-admin
 
 # 不自动安装依赖
 sure-cli create my-app --no-install
@@ -54,8 +54,23 @@ sure-cli create my-app -f
 
 ## 说明
 
-- 依赖安装会自动识别当前使用的包管理器（npm / yarn / pnpm / bun）。
+- 模板列表每次从 GitHub 仓库的根目录读取，仅列出以 `template-` 开头的目录，不使用本地缓存。
+- 创建项目时只复制选中的模板目录内容，保留隐藏文件，不带入仓库根目录文件、其他模板或 `.git`。
+- 依赖安装会自动识别当前使用的包管理器（npm / yarn / pnpm / bun）。没有根目录 `package.json` 的模板会跳过自动安装，按生成项目的 README 操作即可。
 - 模板会先下载到临时目录，成功后才替换目标目录，因此下载失败不会破坏已有文件。
+
+### 添加或删除模板
+
+在 [模板仓库](https://github.com/AndyGuoX/sure-cli-templates) 默认分支的根目录添加或删除 `template-*` 文件夹并推送到 GitHub，即可更新模板列表，无需重新发布 CLI。模板不要求根目录必须有 `package.json`，可以分别包含前后端项目。
+
+```text
+sure-cli-templates/
+├── README.md
+└── template-nest-react-admin/
+    ├── README.md
+    ├── backend/
+    └── frontend/
+```
 
 ## 开发
 

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 
 /**
@@ -41,22 +42,31 @@ export async function isGitAvailable() {
   }
 }
 
-/**
- * 浅克隆模板到指定目录。
- *
- * 替代 download-git-repo（已多年无人维护，且默认拉 master 分支，
- * 而模板仓库默认分支为 main，目前仅靠 GitHub 的重定向侥幸可用）。
- * 不传 --branch 时 git 会自动使用远端默认分支。
- */
-export async function cloneTemplate({ cloneUrl, branch, dest }) {
-  const args = ['clone', '--depth', '1', '--single-branch']
-  if (branch) args.push('--branch', branch)
-  args.push(cloneUrl, dest)
+export async function cloneTemplate({ cloneUrl, directory, dest }) {
+  if (typeof directory !== 'string' || !/^template-[a-z0-9][a-z0-9._-]*$/i.test(directory)) {
+    throw new Error('模板目录名称无效')
+  }
 
-  await run('git', args)
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sure-cli-repo-'))
+  const checkout = path.join(temporaryRoot, 'repository')
 
-  // 移除模板自带的 git 历史，让用户得到一个干净的起点
-  await fs.rm(path.join(dest, '.git'), { recursive: true, force: true })
+  try {
+    await run('git', ['clone', '--depth', '1', '--single-branch', '--', cloneUrl, checkout])
+
+    const source = path.join(checkout, directory)
+    const stat = await fs.lstat(source)
+    if (!stat.isDirectory()) {
+      throw new Error(`模板目录不存在：${directory}`)
+    }
+
+    await fs.cp(source, dest, {
+      recursive: true,
+      verbatimSymlinks: true,
+      filter: (file) => path.basename(file) !== '.git',
+    })
+  } finally {
+    await fs.rm(temporaryRoot, { recursive: true, force: true })
+  }
 }
 
 /**

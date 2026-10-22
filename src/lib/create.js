@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { select, confirm } from '@inquirer/prompts'
-import { getRepoList } from './registry.js'
+import { getTemplateList } from './registry.js'
 import { cloneTemplate, isGitAvailable, initGitRepo } from './git.js'
 import {
   detectPackageManager,
@@ -36,17 +36,17 @@ async function detectStartScript(dir) {
 }
 
 async function resolveTemplate(requested) {
-  const repos = await withSpinner('正在获取模板列表', () => getRepoList())
+  const templates = await withSpinner('正在获取模板列表', () => getTemplateList())
 
-  if (repos.length === 0) {
+  if (templates.length === 0) {
     throw new Error('远端没有可用模板')
   }
 
   if (requested) {
-    const matched = repos.find((repo) => repo.name === requested)
+    const matched = templates.find((template) => template.name === requested)
     if (!matched) {
       throw new Error(
-        `未找到模板 "${requested}"。可用模板：${repos.map((r) => r.name).join(', ')}`,
+        `未找到模板 "${requested}"。可用模板：${templates.map((t) => t.name).join(', ')}`,
       )
     }
     return matched
@@ -54,10 +54,9 @@ async function resolveTemplate(requested) {
 
   return select({
     message: '请选择一个模板',
-    choices: repos.map((repo) => ({
-      name: repo.description ? `${repo.name} - ${colors.gray(repo.description)}` : repo.name,
-      value: repo,
-      short: repo.name,
+    choices: templates.map((template) => ({
+      name: template.name,
+      value: template,
     })),
   })
 }
@@ -102,7 +101,7 @@ export async function create(rawName, options = {}) {
     await withSpinner(`正在下载模板 ${template.name}`, () =>
       cloneTemplate({
         cloneUrl: template.cloneUrl,
-        branch: template.defaultBranch,
+        directory: template.directory,
         dest: staging,
       }),
     )
@@ -125,9 +124,12 @@ export async function create(rawName, options = {}) {
   log.info(colors.green('🗃  项目初始化成功'))
 
   const packageManager = detectPackageManager()
+  const hasPackageJson = await pathExists(path.join(targetDir, 'package.json'))
 
-  if (options.install === false) {
-    log.info(`已跳过依赖安装`)
+  if (!hasPackageJson) {
+    log.info('模板根目录没有 package.json，已跳过依赖安装，请按项目 README 操作')
+  } else if (options.install === false) {
+    log.info('已跳过依赖安装')
   } else {
     log.info(`📦 正在使用 ${colors.cyan(packageManager)} 安装依赖...`)
     try {
@@ -154,11 +156,14 @@ export async function create(rawName, options = {}) {
   log.plain('👉 接下来：')
   log.plain()
   log.plain(`   ${colors.dim('$')} ${colors.cyan(`cd ${name}`)}`)
-  if (options.install === false) {
+  if (hasPackageJson && options.install === false) {
     log.plain(`   ${colors.dim('$')} ${colors.cyan(`${packageManager} install`)}`)
   }
   if (startScript) {
     log.plain(`   ${colors.dim('$')} ${colors.cyan(runCommand(packageManager, startScript))}`)
+  }
+  if (!hasPackageJson) {
+    log.plain('   请按项目 README 配置并启动前后端')
   }
   log.plain()
 }

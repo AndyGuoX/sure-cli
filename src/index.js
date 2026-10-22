@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { Command } from 'commander'
 import figlet from 'figlet'
 import { create } from './lib/create.js'
-import { getRepoList } from './lib/registry.js'
+import { getTemplateList } from './lib/registry.js'
 import { colors, log } from './utils/ui.js'
 
 const pkg = JSON.parse(
@@ -36,15 +36,14 @@ export function buildProgram() {
     .alias('ls')
     .description('查看所有可用模板')
     .action(async () => {
-      const repos = await getRepoList()
-      if (repos.length === 0) {
+      const templates = await getTemplateList()
+      if (templates.length === 0) {
         log.info('暂无可用模板')
         return
       }
       log.plain()
-      for (const repo of repos) {
-        log.plain(`  ${colors.cyan(repo.name)}`)
-        if (repo.description) log.plain(`    ${colors.gray(repo.description)}`)
+      for (const template of templates) {
+        log.plain(`  ${colors.cyan(template.name)}`)
       }
       log.plain()
     })

@@ -1,17 +1,7 @@
-const ORG = 'sure-cli-template'
-const API = `https://api.github.com/orgs/${ORG}/repos?per_page=100&type=public`
+const REPOSITORY = 'AndyGuoX/sure-cli-templates'
+const API = `https://api.github.com/repos/${REPOSITORY}/contents`
 
-/**
- * 获取可用模板列表。
- *
- * 相比旧实现：
- * - 用原生 fetch,去掉 axios 依赖
- * - 不再修改全局拦截器
- * - per_page=100，过滤 fork / archived
- * - 支持 GITHUB_TOKEN 提升限流额度(未认证时每小时仅 60 次)
- * - 带超时，避免无限等待
- */
-export async function getRepoList({ timeout = 15_000 } = {}) {
+export async function getTemplateList({ timeout = 15_000 } = {}) {
   const headers = {
     Accept: 'application/vnd.github+json',
     'User-Agent': 'sure-cli',
@@ -44,18 +34,19 @@ export async function getRepoList({ timeout = 15_000 } = {}) {
     throw new Error(`获取模板列表失败（HTTP ${response.status}）`)
   }
 
-  const repos = await response.json()
-  if (!Array.isArray(repos)) {
+  const contents = await response.json()
+  if (!Array.isArray(contents)) {
     throw new Error('GitHub 返回了非预期的数据格式')
   }
 
-  return repos
-    .filter((repo) => !repo.fork && !repo.archived && !repo.disabled)
-    .map((repo) => ({
-      name: repo.name,
-      description: repo.description || '',
-      defaultBranch: repo.default_branch || 'main',
-      cloneUrl: repo.clone_url,
+  return contents
+    .filter((entry) => entry.type === 'dir'
+      && /^template-[a-z0-9][a-z0-9._-]*$/i.test(entry.name)
+      && entry.path === entry.name)
+    .map((entry) => ({
+      name: entry.name,
+      directory: entry.path,
+      cloneUrl: `https://github.com/${REPOSITORY}.git`,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
